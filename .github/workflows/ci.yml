@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin runs inside DSH on Node 20+; both ends of the supported
+        # range are exercised so a language-level change cannot slip through.
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # No dependencies to install: the plugin and its suites use only Node
+      # builtins, and the bundle deliberately requires nothing beyond the
+      # browser module table's baseline.
+      - name: Syntax check
+        run: |
+          node --check lib/index.js
+          node --check lib/client.js
+          for file in test/*.mjs; do node --check "$file"; done
+
+      - name: Test
+        run: npm test
+
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The manifest is what the plugin manager reads to install this bundle, so
+      # a malformed one is caught here rather than at install time.
+      - name: Validate package manifest
+        run: node -e "
+          const pkg = require('./package.json');
+          const need = [
+            ['name', pkg.name === 'dsh-llm-model-tuning'],
+            ['dsh.bundle.patch', pkg.dsh?.bundle?.patch === './cordis.patch.yml'],
+            ['dsh.client.platform', pkg.dsh?.client?.platform === 'web'],
+            ['exports[./client]', pkg.exports?.['./client'] === './lib/client.js'],
+          ];
+          const bad = need.filter(([, ok]) => !ok).map(([field]) => field);
+          if (bad.length > 0) { console.error('invalid manifest fields: ' + bad.join(', ')); process.exit(1); }
+          console.log('manifest OK');
+          "

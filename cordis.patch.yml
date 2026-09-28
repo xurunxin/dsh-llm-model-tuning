@@ -1,0 +1,9 @@
+# dsh bundle patch: inserts this plugin into a profile's layer stack.
+#
+# The row publishes no service and holds no config: its whole contribution is
+# the browser-side settings card registered on the `settings.models.provider-card`
+# seat. Presence in the layer stack is what makes the host scan `dsh.client` and
+# serve `lib/client.js` into the boot graph.
+- insert:
+    - id: llm-model-tuning
+      name: 'dsh-llm-model-tuning'

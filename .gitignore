@@ -1,0 +1,18 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Packed artifacts
+*.tgz
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local DSH state that must never be committed
+.credentials.yaml
+settings.yaml

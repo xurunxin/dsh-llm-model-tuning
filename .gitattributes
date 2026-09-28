@@ -1,0 +1,3 @@
+# Normalize to LF in the repository so the served client bundle is byte-stable
+# across platforms and diffs never churn on line-ending conversion alone.
+* text=auto eol=lf
