@@ -1,11 +1,11 @@
 {
   "name": "dsh-llm-model-tuning",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "private": true,
-  "description": "Per-model reasoning-effort levels and multimodal input settings for custom (llm-pi-ai) providers in the DSH Models settings page. · 为自定义供应商的每个模型配置推理强度档位与多模态输入。",
+  "description": "Per-model reasoning-effort levels, multimodal input settings, and Magpie gateway model import for custom (llm-pi-ai) providers in the DSH Models settings page. · 为自定义供应商的每个模型配置推理强度档位、多模态输入，并从 Magpie 网关导入模型能力。",
   "meta": {
-    "title": "Model Tuning — Reasoning & Multimodal · 模型调优",
-    "description": "Adds a per-model reasoning-effort level editor and multimodal input settings to every custom provider card in Settings → Models."
+    "title": "Model Tuning — Reasoning, Multimodal & Magpie Import · 模型调优",
+    "description": "Adds a per-model reasoning-effort level editor, multimodal input settings, and one-click Magpie gateway model import to every custom provider card in Settings → Models."
   },
   "type": "module",
   "main": "lib/index.js",
@@ -22,7 +22,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node test/harness.mjs && node test/integration.mjs && node test/conformance.mjs && node test/bundle-contract.mjs",
+    "test": "node test/harness.mjs && node test/magpie.mjs && node test/host-harness.mjs && node test/integration.mjs && node test/conformance.mjs && node test/bundle-contract.mjs",
     "check": "node --check lib/index.js && node --check lib/client.js && npm test"
   },
   "keywords": [
