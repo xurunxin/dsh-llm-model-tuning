@@ -690,6 +690,27 @@ function candidateBadge(row) {
   return found === undefined ? undefined : textOf(found).trim()
 }
 
+/** The models.dev `补全` badge of a candidate row, if the Host enriched it. */
+function completeBadge(row) {
+  return findAll(row, (node) => node.type === "span" && classHas(node, "dsh-mtune-badge-complete"))[0]
+}
+
+/** The dialog shell that carries the adaptive width. */
+function dialogBox(tree) {
+  const found = findClass(tree, "dsh-mtune-modal-dialog")
+  if (found === undefined) throw new Error("harness: no dialog to measure")
+  return found
+}
+
+/** The import dialog's estimated width in pixels, from its own data attribute. */
+function dialogWidth(tree) {
+  const declared = dialogBox(tree).props?.["data-mtune-dialog-width"]
+  if (declared === undefined) throw new Error("harness: the dialog carries no data-mtune-dialog-width")
+  const width = Number(declared)
+  if (!Number.isFinite(width)) throw new Error(`harness: dialog width is not a number: ${String(declared)}`)
+  return width
+}
+
 /** Whether a checkbox controls a checkbox input rather than a radio. */
 function isChecked(inputNode) {
   return inputNode.props?.checked === true
@@ -889,6 +910,23 @@ function loadBundle(React) {
     if (specifier === "react") return React
     throw new Error(`harness: unexpected require("${specifier}")`)
   })
+}
+
+/* ----------------------------------------------------------- stylesheet probes */
+
+/** The text of the stylesheet the plugin installed with the most recent boot. */
+function installedCss() {
+  const tag = styleTags[styleTags.length - 1]
+  assert(tag !== undefined, "harness: the plugin installed no stylesheet")
+  return tag.textContent
+}
+
+/** The declaration block of one exact rule in the installed stylesheet. */
+function cssRule(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  const match = installedCss().match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
+  assert(match !== null, `harness: no CSS rule for ${selector}`)
+  return match[1]
 }
 
 /* ------------------------------------------------------------------- runner */
@@ -2072,6 +2110,227 @@ check("a failed validation names the field and never attempts a write", async ()
   assertEqual(handle.form.calls.length, 0, "the refusal prevents the write")
 })
 
+/* ------------------- adaptive dialog width and models.dev completion */
+
+/** One import answer for the given candidate list, with an optional modelsDev report. */
+function importAnswer(models, modelsDev) {
+  const payload = { ok: true, models: clone(models), warnings: [] }
+  if (modelsDev !== undefined) payload.modelsDev = clone(modelsDev)
+  return jsonResponse(payload)
+}
+
+/** Width probes: short ids on the 380px floor, a medium list, an over-cap long list. */
+const WIDTH_SHORT_MODELS = [
+  { id: "auto", name: "Auto" },
+  { id: "glm", name: "GLM" },
+]
+const WIDTH_MEDIUM_MODELS = [
+  { id: "gateway/moderately-long-model-id", name: "Moderately Long Model Name" },
+  { id: "auto", name: "Auto" },
+]
+const WIDTH_LONG_MODELS = [{ id: `gateway/${"x".repeat(180)}`, name: "超长模型名称".repeat(20) }]
+
+/** A models.dev report that enriched two candidates of COMPLETION_MODELS. */
+const COMPLETION_MODELS = [
+  { id: "auto", name: "Auto", contextWindow: 200000 },
+  { id: "brand-new", name: "Brand New", contextWindow: 128000 },
+  { id: "plain-model", name: "Plain Model" },
+]
+const COMPLETION_REPORT = {
+  source: "models.dev",
+  available: true,
+  matched: 2,
+  enriched: [
+    { id: "auto", fields: ["name", "contextWindow", "maxTokens", "input", "reasoningEfforts"] },
+    { id: "brand-new", fields: ["name", "contextWindow"] },
+  ],
+  unmatched: [],
+}
+
+check("sizes the import dialog to the 380px floor for short candidates", async () => {
+  const handle = boot()
+  const stub = stubFetch(() => importAnswer(WIDTH_SHORT_MODELS))
+  try {
+    const tree = await openPicker(handle)
+    const box = dialogBox(tree)
+    assertEqual(box.props["data-mtune-dialog-width"], "380", "the narrowest dialog is the 380px floor")
+    assertEqual(dialogWidth(tree), 380, "the width is a number the tests can compare")
+    assertEqual(
+      box.props.style["--dsh-mtune-dialog-width"],
+      "380px",
+      "the stylesheet receives the width through its custom property",
+    )
+    assertEqual(dialogWidth(tree) % 10, 0, "the estimate is rounded to whole tens")
+  } finally {
+    stub.restore()
+  }
+})
+
+check("widens the import dialog for long ids/names and caps it at 920px", async () => {
+  // A medium listing: 32 mono characters at ~7.3px + 164px chrome, rounded up.
+  const medium = boot()
+  const mediumStub = stubFetch(() => importAnswer(WIDTH_MEDIUM_MODELS))
+  try {
+    const width = dialogWidth(await openPicker(medium))
+    assert(width > 380, `a medium id must widen the dialog, got ${String(width)}`)
+    assert(width < 920, `a medium id must stay below the cap, got ${String(width)}`)
+    assertEqual(width, 400, "the estimate follows the longest line plus its chrome")
+  } finally {
+    mediumStub.restore()
+  }
+
+  // CJK text counts two display units per character, so it widens faster.
+  const cjk = boot()
+  const cjkStub = stubFetch(() => importAnswer([{ id: "cjk", name: "超长模型".repeat(8) }]))
+  try {
+    assertEqual(dialogWidth(await openPicker(cjk)), 620, "CJK names count two display units per character")
+  } finally {
+    cjkStub.restore()
+  }
+
+  // A listing too wide for any viewport stops at the 920px cap.
+  const long = boot()
+  const longStub = stubFetch(() => importAnswer(WIDTH_LONG_MODELS))
+  try {
+    assertEqual(dialogWidth(await openPicker(long)), 920, "an unreadably long listing stops at the 920px cap")
+  } finally {
+    longStub.restore()
+  }
+})
+
+check("searching the dialog never resizes it", async () => {
+  const handle = boot()
+  const stub = stubFetch(() => importAnswer(WIDTH_MEDIUM_MODELS))
+  try {
+    let tree = await openPicker(handle)
+    const width = dialogWidth(tree)
+    assertEqual(width, 400, "the unfiltered width follows the whole listing")
+
+    setSearch(tree, "auto")
+    tree = handle.draw()
+    assertEqual(candidateIds(tree), ["auto"], "the search really filtered the candidate list")
+    assertEqual(dialogWidth(tree), width, "the filtered list keeps the width of the whole listing")
+
+    setSearch(tree, "")
+    tree = handle.draw()
+    assertEqual(dialogWidth(tree), width, "clearing the search does not resize the dialog either")
+  } finally {
+    stub.restore()
+  }
+})
+
+check("renders long candidate ids and names in full and the sheet no longer truncates them", async () => {
+  const longId = `gateway/${"very-long-model-slug-".repeat(4)}${"z".repeat(40)}`
+  const longName = `${"超长".repeat(3)} ${"Long Display Name ".repeat(2).trim()}`
+  const handle = boot()
+  const stub = stubFetch(() => importAnswer([{ id: longId, name: longName }]))
+  try {
+    const tree = await openPicker(handle)
+    const row = candidateRow(tree, longId)
+    assertEqual(candidateIdText(row), longId, "the mono id line renders the full id")
+    assert(textOf(row).includes(longName), "the display name renders in full on its own line")
+
+    const title = row.props.title
+    assert(typeof title === "string" && title.length > 0, "the candidate row carries a title")
+    assert(title.includes(longId), "the row title carries the full id")
+    assert(title.includes(longName), "the row title carries the full name")
+    assertEqual(findClass(row, "dsh-mtune-candidate-id").props.title, title, "the id line repeats the full identity")
+
+    const idRule = cssRule(".dsh-mtune-candidate-id")
+    assert(idRule.includes("white-space: normal"), "the candidate id wraps instead of nowrap")
+    assert(idRule.includes("overflow-wrap: anywhere"), "a very long id wraps inside the text column")
+    assert(!idRule.includes("text-overflow"), "the candidate id no longer ellipsizes")
+
+    const nameRule = cssRule(".dsh-mtune-candidate-name")
+    assert(nameRule.includes("white-space: normal"), "the candidate name wraps instead of nowrap")
+    assert(nameRule.includes("overflow-wrap: anywhere"), "a very long name wraps inside the text column")
+    assert(!nameRule.includes("text-overflow"), "the candidate name no longer ellipsizes")
+
+    const dialogRule = cssRule(".dsh-mtune-modal-dialog")
+    assert(dialogRule.includes("var(--dsh-mtune-dialog-width, 380px)"), "the dialog width defaults to 380px")
+    assert(dialogRule.includes("calc(100vw - 48px)"), "the viewport additionally caps the dialog width")
+    assert(dialogRule.includes("max-width: 920px"), "the dialog never exceeds the 920px cap")
+  } finally {
+    stub.restore()
+  }
+})
+
+check("shows the models.dev completion hint and 补全 badges, and reports the count after import", async () => {
+  const handle = boot()
+  const stub = stubFetch(() => importAnswer(COMPLETION_MODELS, COMPLETION_REPORT))
+  try {
+    let tree = await openPicker(handle)
+    assert(
+      textOf(dialog(tree)).includes("已通过 models.dev 自动补全 2 个模型的设置。"),
+      `the dialog announces the completion: ${textOf(dialog(tree))}`,
+    )
+
+    const enriched = completeBadge(candidateRow(tree, "auto"))
+    assert(enriched !== undefined, "an enriched candidate carries the 补全 badge")
+    assertEqual(textOf(enriched), "补全", "the badge says 补全")
+    assert(classHas(enriched, "dsh-mtune-badge-complete"), "the badge carries its own class")
+    for (const label of ["名称", "上下文", "最大输出", "输入类型", "推理档位"]) {
+      assert(String(enriched.props.title).includes(label), `the badge title names the filled field ${label}`)
+    }
+    assertEqual(candidateBadge(candidateRow(tree, "auto")), "覆盖", "the 新增/覆盖 badge still renders beside it")
+    assertEqual(candidateBadge(candidateRow(tree, "brand-new")), "新增", "a new enriched candidate is still 新增")
+    assertEqual(findAllClass(tree, "dsh-mtune-badge-complete").length, 2, "each enriched candidate is marked once")
+    assertEqual(completeBadge(candidateRow(tree, "plain-model")), undefined, "an unmatched candidate is not marked")
+
+    tree = await confirmPicker(handle)
+    const status = importStatus(tree)
+    assert(status !== undefined, "the import reports its outcome")
+    const text = textOf(status)
+    assert(text.includes("已导入 3 个模型（新增 2、覆盖 1）"), `the status prefix is unchanged: ${text}`)
+    assert(text.includes("models.dev 补全：2 个模型"), `the enriched imports are counted: ${text}`)
+    assertEqual(status.props.className.includes("dsh-mtune-ok"), true, "an enriched import keeps the ok class")
+  } finally {
+    stub.restore()
+  }
+})
+
+check("reports models.dev completion as unavailable in the dialog", async () => {
+  const handle = boot()
+  const errorText = "models.dev 返回 502，已跳过自动补全"
+  const stub = stubFetch(() =>
+    importAnswer([{ id: "auto" }], { source: "models.dev", available: false, error: errorText }),
+  )
+  try {
+    let tree = await openPicker(handle)
+    const dialogText = textOf(dialog(tree))
+    assert(dialogText.includes(`models.dev 补全不可用：${errorText}`), `the failure is announced: ${dialogText}`)
+    const hint = findClass(tree, "dsh-mtune-completion-hint")
+    assert(hint !== undefined, "the unavailable notice is a completion hint")
+    assert(classHas(hint, "dsh-mtune-warn"), "the unavailable notice uses the warn colour")
+    assertEqual(findAllClass(tree, "dsh-mtune-badge-complete").length, 0, "no candidate claims a completion")
+
+    tree = await confirmPicker(handle)
+    const text = textOf(importStatus(tree))
+    assert(text.includes("已导入 1 个模型（新增 0、覆盖 1）"), `the status prefix is unchanged: ${text}`)
+    assert(!text.includes("models.dev 补全："), "an unavailable lookup adds no completion suffix")
+  } finally {
+    stub.restore()
+  }
+})
+
+check("an import answer without modelsDev renders no completion UI", async () => {
+  const handle = boot()
+  const stub = stubFetch(pickerAnswer)
+  try {
+    let tree = await openPicker(handle)
+    assert(!textOf(dialog(tree)).includes("models.dev"), "the dialog shows no models.dev hint")
+    assertEqual(findAllClass(tree, "dsh-mtune-badge-complete").length, 0, "no 补全 badge is rendered")
+    assertEqual(dialogWidth(tree), 380, "the width still follows the candidate text alone")
+
+    tree = await confirmPicker(handle)
+    const text = textOf(importStatus(tree))
+    assert(text.includes("已导入 3 个模型（新增 1、覆盖 2）"), `the old status line is unchanged: ${text}`)
+    assert(!text.includes("models.dev"), "no completion suffix is appended")
+  } finally {
+    stub.restore()
+  }
+})
+
 /* ---------------------------------------------------------------- reporting */
 
 installGlobals()
@@ -2106,6 +2365,9 @@ export {
   candidateIds,
   candidateIdText,
   candidateBadge,
+  completeBadge,
+  dialogBox,
+  dialogWidth,
   searchInput,
   setSearch,
   selectAllButton,

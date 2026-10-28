@@ -60,10 +60,11 @@ check("package declares the client half the loader scans for", () => {
   assert(pkg.dsh.client.platform === "web", "dsh.client.platform must be 'web'")
   assert(pkg.dsh.bundle?.patch === "./cordis.patch.yml", "dsh.bundle.patch is missing")
   assert(pkg.exports["./client"] === "./lib/client.js", "exports['./client'] must point at the bundle")
+  assert(pkg.exports["./modelsdev"] === "./lib/modelsdev.js", "exports['./modelsdev'] must point at the models.dev module")
 })
 
 check("every declared file exists", () => {
-  for (const relative of ["lib/client.js", "lib/index.js", "cordis.patch.yml"]) {
+  for (const relative of ["lib/client.js", "lib/index.js", "lib/modelsdev.js", "lib/magpie.js", "cordis.patch.yml"]) {
     assert(existsSync(join(root, relative)), `${relative} does not exist`)
   }
 })

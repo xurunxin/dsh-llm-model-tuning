@@ -1,17 +1,18 @@
 {
   "name": "dsh-llm-model-tuning",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "private": true,
-  "description": "Per-model reasoning-effort levels, multimodal input settings, and Magpie gateway model import for custom (llm-pi-ai) providers in the DSH Models settings page. · 为自定义供应商的每个模型配置推理强度档位、多模态输入，并从 Magpie 网关导入模型能力。",
+  "description": "Per-model reasoning-effort levels, multimodal input settings, and Magpie gateway model import for custom (llm-pi-ai) providers in the DSH Models settings page, with automatic models.dev completion for sparse gateway listings and compatibility for gateways that decorate model ids (e.g. `cn:kimi-k3-1`) or spell detail fields differently (e.g. `attachments`, `reasoning_supported_efforts`). · 为自定义供应商的每个模型配置推理强度档位、多模态输入，并从 Magpie 网关导入模型能力；兼容 `cn:kimi-k3-1` 这类带标识的模型 id 与 `attachments`/`reasoning_supported_efforts` 等网关扩展字段，缺少模型详情时按 https://models.dev 智能匹配补全。",
   "meta": {
-    "title": "Model Tuning — Reasoning, Multimodal & Magpie Import · 模型调优",
-    "description": "Adds a per-model reasoning-effort level editor, multimodal input settings, and one-click Magpie gateway model import to every custom provider card in Settings → Models."
+    "title": "Model Tuning — Reasoning, Multimodal, Magpie Import & models.dev Completion · 模型调优",
+    "description": "Adds a per-model reasoning-effort level editor, multimodal input settings, one-click Magpie gateway model import, and automatic models.dev completion for sparse model listings to every custom provider card in Settings → Models."
   },
   "type": "module",
   "main": "lib/index.js",
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
+    "./modelsdev": "./lib/modelsdev.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
@@ -22,8 +23,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "node test/harness.mjs && node test/magpie.mjs && node test/host-harness.mjs && node test/integration.mjs && node test/conformance.mjs && node test/bundle-contract.mjs",
-    "check": "node --check lib/index.js && node --check lib/client.js && npm test"
+    "test": "node test/harness.mjs && node test/modelsdev.mjs && node test/magpie.mjs && node test/host-harness.mjs && node test/integration.mjs && node test/conformance.mjs && node test/bundle-contract.mjs",
+    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/modelsdev.js && npm test"
   },
   "keywords": [
     "deepseek-harness",

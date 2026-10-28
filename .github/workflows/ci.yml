@@ -29,6 +29,8 @@ jobs:
         run: |
           node --check lib/index.js
           node --check lib/client.js
+          node --check lib/modelsdev.js
+          node --check lib/magpie.js
           for file in test/*.mjs; do node --check "$file"; done
 
       - name: Test

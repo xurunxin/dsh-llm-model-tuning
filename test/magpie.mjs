@@ -1,11 +1,14 @@
 /**
  * Mapping tests for `lib/magpie.js`, driven by the saved live Magpie gateway
- * response (`test/fixtures/magpie-models.json`, 28 models).
+ * response (`test/fixtures/magpie-models.json`, 28 models) and a representative
+ * WorkBuddy-style listing (`test/fixtures/workbuddy-models.json`, 6 models).
  *
  * These are the contract-level assertions for the Magpie extension mapping:
- * capacities, modality floor, reasoning-level spelling, the `models` map
- * envelope, malformed listings, and the warnings that tell a user what was
- * dropped. No network, no Harness, no dependencies.
+ * capacities, modality floor, reasoning-level spelling, the WorkBuddy field
+ * spellings (`attachments`, `supports_images`, `reasoning_supported_efforts`,
+ * `only_reasoning`, `supports_reasoning`), the `models` map envelope, malformed
+ * listings, and the warnings that tell a user what was dropped. No network, no
+ * Harness, no dependencies.
  *
  * Run: node test/magpie.mjs
  */
@@ -14,6 +17,7 @@ import { readFileSync } from "node:fs"
 import { mapModelEntry, mapModelListing, parseModelListing, THINKING_LEVELS } from "../lib/magpie.js"
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/magpie-models.json", import.meta.url), "utf8"))
+const workbuddyFixture = JSON.parse(readFileSync(new URL("./fixtures/workbuddy-models.json", import.meta.url), "utf8"))
 
 const results = []
 function check(name, fn) {
@@ -277,6 +281,36 @@ check("no disclosed modalities (or an empty list) omits input", () => {
   assert.equal(Object.hasOwn(mapModelEntry({ id: "m", modalities: { input: [] } }).entry, "input"), false)
 })
 
+check("WorkBuddy attachments and the supports_images hint disclose modalities", () => {
+  assert.deepEqual(mapModelEntry({ id: "m", attachments: ["image"] }).entry.input, ["text", "image"])
+  assert.deepEqual(mapModelEntry({ id: "m", attachments: ["text"] }).entry.input, ["text"])
+  assert.deepEqual(
+    mapModelEntry({ id: "m", attachments: ["IMAGE", "pdf", "Image"] }).entry,
+    { id: "m", input: ["text", "image"] },
+    "the array is filtered like every other modality list",
+  )
+  assert.deepEqual(mapModelEntry({ id: "m", supports_images: true }).entry.input, ["text", "image"])
+  assert.equal(Object.hasOwn(mapModelEntry({ id: "m", supports_images: false }).entry, "input"), false)
+  // `supports_attachments` is too generic to mean "takes images".
+  assert.equal(Object.hasOwn(mapModelEntry({ id: "m", supports_attachments: true }).entry, "input"), false)
+})
+
+check("Magpie modality sources win over the WorkBuddy spellings", () => {
+  assert.deepEqual(
+    mapModelEntry({ id: "m", modalities: { input: ["text"] }, attachments: ["image"], supports_images: true }).entry
+      .input,
+    ["text"],
+  )
+  assert.deepEqual(mapModelEntry({ id: "m", input_modalities: ["text"], attachments: ["image"] }).entry.input, [
+    "text",
+  ])
+  assert.deepEqual(
+    mapModelEntry({ id: "m", attachments: ["text"], supports_images: true }).entry.input,
+    ["text"],
+    "the attachments list wins over the boolean hint",
+  )
+})
+
 /* ---------------------------------------------------------------- reasoning -- */
 
 check("supported_reasoning_levels objects map to wire spellings", () => {
@@ -307,6 +341,105 @@ check("plain-string level lists are accepted from either field", () => {
     }).entry.reasoningEfforts,
     { high: "high" },
   )
+})
+
+check("WorkBuddy reasoning_supported_efforts maps to levels and has an alias", () => {
+  assert.deepEqual(
+    mapModelEntry({
+      id: "m",
+      only_reasoning: true,
+      reasoning_supported_efforts: ["low", "high", "xhigh"],
+    }).entry.reasoningEfforts,
+    { low: "low", high: "high", xhigh: "xhigh" },
+  )
+  assert.deepEqual(
+    mapModelEntry({
+      id: "m",
+      supports_reasoning: true,
+      supported_reasoning_efforts: ["none", "LOW"],
+    }).entry.reasoningEfforts,
+    { off: null, low: "low" },
+  )
+  // Unknown levels keep the existing skip-with-warning behavior.
+  const unknown = mapModelEntry({
+    id: "gateway/wb",
+    supports_reasoning: true,
+    reasoning_supported_efforts: ["low", "ultra"],
+  })
+  assert.deepEqual(unknown.entry.reasoningEfforts, { low: "low" })
+  assert.deepEqual(unknown.warnings, ["gateway/wb：跳过 DSH 不支持的推理档位 ultra"])
+})
+
+check("Magpie level sources win over the WorkBuddy arrays", () => {
+  assert.deepEqual(
+    mapModelEntry({
+      id: "m",
+      supported_reasoning_levels: [{ effort: "medium" }],
+      reasoning_supported_efforts: ["low"],
+    }).entry.reasoningEfforts,
+    { medium: "medium" },
+  )
+  assert.deepEqual(
+    mapModelEntry({
+      id: "m",
+      reasoning_levels: ["high"],
+      reasoning_supported_efforts: ["low"],
+    }).entry.reasoningEfforts,
+    { high: "high" },
+  )
+  assert.deepEqual(
+    mapModelEntry({
+      id: "m",
+      reasoning_supported_efforts: ["low"],
+      supported_reasoning_efforts: ["high"],
+    }).entry.reasoningEfforts,
+    { low: "low" },
+  )
+})
+
+check("a WorkBuddy reasoning flag without usable levels warns and omits the field", () => {
+  for (const flags of [{ only_reasoning: true }, { supports_reasoning: true }, { only_reasoning: true, supports_reasoning: true }]) {
+    const { entry, warnings } = mapModelEntry({ id: "gateway/wb", ...flags })
+    assert.equal(Object.hasOwn(entry, "reasoningEfforts"), false)
+    assert.deepEqual(warnings, ["gateway/wb：网关声明支持推理，但未提供推理档位"])
+  }
+  // An all-unknown level list is reported with the existing second warning.
+  const unknown = mapModelEntry({
+    id: "gateway/wb",
+    only_reasoning: true,
+    reasoning_supported_efforts: ["ultra"],
+  })
+  assert.equal(Object.hasOwn(unknown.entry, "reasoningEfforts"), false)
+  assert.deepEqual(unknown.warnings, [
+    "gateway/wb：跳过 DSH 不支持的推理档位 ultra",
+    "gateway/wb：没有 DSH 支持的推理档位，已省略",
+  ])
+})
+
+check("supports_reasoning:false declines reasoning only when nothing else is declared", () => {
+  assert.deepEqual(mapModelEntry({ id: "m", supports_reasoning: false }).entry, {
+    id: "m",
+    reasoningEfforts: false,
+  })
+  // A disclosed level list wins over the decline.
+  assert.deepEqual(
+    mapModelEntry({ id: "m", supports_reasoning: false, reasoning_supported_efforts: ["low"] }).entry.reasoningEfforts,
+    { low: "low" },
+  )
+  // A declared flag wins over the decline as well, and warns (no levels).
+  const declared = mapModelEntry({ id: "gateway/wb", supports_reasoning: false, only_reasoning: true })
+  assert.equal(Object.hasOwn(declared.entry, "reasoningEfforts"), false)
+  assert.deepEqual(declared.warnings, ["gateway/wb：网关声明支持推理，但未提供推理档位"])
+  // `reasoning: false` stays authoritative.
+  assert.equal(mapModelEntry({ id: "m", reasoning: false, supports_reasoning: false }).entry.reasoningEfforts, false)
+})
+
+check("reasoning_default_effort is a single default, not a level list", () => {
+  assert.deepEqual(mapModelEntry({ id: "m", reasoning_default_effort: "high" }).entry, { id: "m" })
+  assert.deepEqual(mapModelEntry({ id: "m", reasoning_default_effort: "high", supports_reasoning: false }).entry, {
+    id: "m",
+    reasoningEfforts: false,
+  })
 })
 
 check("off and none become key off with a null wire spelling", () => {
@@ -364,6 +497,64 @@ check("no reasoning flag and no levels omits the field silently", () => {
   const { entry, warnings } = mapModelEntry({ id: "m", name: "M" })
   assert.equal(Object.hasOwn(entry, "reasoningEfforts"), false)
   assert.deepEqual(warnings, [])
+})
+
+/* ------------------------------------------------------ WorkBuddy fixture -- */
+
+check("the WorkBuddy fixture maps its own spellings and warns only for the undisclosed model", () => {
+  const { models, warnings } = mapModelListing(workbuddyFixture)
+  assert.deepEqual(
+    models.map((model) => model.id),
+    workbuddyFixture.data.map((raw) => raw.id),
+  )
+  const byId = new Map(models.map((model) => [model.id, model]))
+
+  assert.deepEqual(byId.get("cn:kimi-k3-1"), {
+    id: "cn:kimi-k3-1",
+    name: "Kimi-K3",
+    contextWindow: 1000000,
+    maxTokens: 32000,
+    input: ["text", "image"],
+    reasoningEfforts: { low: "low", high: "high", xhigh: "xhigh" },
+  })
+  assert.deepEqual(byId.get("cn:glm-5.3"), {
+    id: "cn:glm-5.3",
+    name: "GLM-5.3",
+    contextWindow: 1000000,
+    maxTokens: 64000,
+    input: ["text", "image"],
+    reasoningEfforts: { low: "low", high: "high", max: "max" },
+  })
+  assert.deepEqual(byId.get("cn:hy4-preview-ctrl"), {
+    id: "cn:hy4-preview-ctrl",
+    name: "Hy4 preview",
+    contextWindow: 960000,
+    maxTokens: 64000,
+    input: ["text", "image"],
+    reasoningEfforts: { high: "high" },
+  })
+
+  // `only_reasoning` with no `reasoning_supported_efforts` is the warning path.
+  assert.equal(Object.hasOwn(byId.get("cn:hy3-b"), "reasoningEfforts"), false)
+  assert.deepEqual(byId.get("cn:hy3-b").input, ["text", "image"])
+
+  // A non-reasoning model discloses modalities only; the boolean decline is a
+  // reasoning disclosure on the image model, which also discloses no input.
+  assert.deepEqual(byId.get("cn:deepseek-v3-1"), {
+    id: "cn:deepseek-v3-1",
+    name: "DeepSeek-V3.1",
+    contextWindow: 96000,
+    maxTokens: 32000,
+    input: ["text", "image"],
+  })
+  assert.deepEqual(byId.get("cn:hunyuan-image-alpha"), {
+    id: "cn:hunyuan-image-alpha",
+    name: "Hunyuan Image Alpha",
+    contextWindow: 1000000,
+    reasoningEfforts: false,
+  })
+
+  assert.deepEqual(warnings, ["cn:hy3-b：网关声明支持推理，但未提供推理档位"])
 })
 
 /* ------------------------------------------------------------ listing shapes */

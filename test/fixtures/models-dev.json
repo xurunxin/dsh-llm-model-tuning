@@ -1,0 +1,392 @@
+{
+  "openai": {
+    "id": "openai",
+    "name": "OpenAI",
+    "api": "https://api.openai.com/v1",
+    "models": {
+      "gpt-6.1-sol": {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "family": "gpt-sol",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1050000, "output": 128000 },
+        "canonical_model_id": "openai/gpt-6.1-sol"
+      },
+      "gpt-4o-mini-audio": {
+        "id": "gpt-4o-mini-audio",
+        "name": "GPT-4o Mini Audio",
+        "family": "gpt-audio",
+        "reasoning": false,
+        "modalities": { "input": ["text", "audio"], "output": ["text"] },
+        "limit": { "context": 128000, "output": 16384 }
+      }
+    }
+  },
+  "anthropic": {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "api": "https://api.anthropic.com/v1",
+    "models": {
+      "claude-haiku-5-5": {
+        "id": "claude-haiku-5-5",
+        "name": "Claude Haiku 5.5",
+        "family": "claude-haiku",
+        "reasoning": true,
+        "reasoning_options": [
+          { "type": "toggle" },
+          { "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }
+        ],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1000000, "output": 128000 },
+        "canonical_model_id": "anthropic/claude-haiku-5-5"
+      },
+      "claude-doc-reader": {
+        "id": "claude-doc-reader",
+        "name": "Claude Doc Reader",
+        "reasoning": true,
+        "reasoning_options": [
+          { "type": "toggle" },
+          { "type": "budget_tokens", "min": 1024, "max": 63999 }
+        ],
+        "modalities": { "input": ["text", "pdf"], "output": ["text"] },
+        "limit": { "context": 200000, "output": 32000 },
+        "canonical_model_id": "anthropic/claude-doc-reader"
+      }
+    }
+  },
+  "deepseek": {
+    "id": "deepseek",
+    "name": "DeepSeek",
+    "api": "https://api.deepseek.com",
+    "models": {
+      "deepseek-flash": {
+        "id": "deepseek-flash",
+        "name": "DeepSeek V4.1 Flash 1017",
+        "family": "deepseek-flash",
+        "reasoning": true,
+        "reasoning_options": [
+          { "type": "toggle" },
+          { "type": "effort", "values": ["low", "high", "max"] }
+        ],
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "limit": { "context": 1048576, "output": 393216 },
+        "canonical_model_id": "deepseek/deepseek-v4.1-flash-1017"
+      }
+    }
+  },
+  "azure": {
+    "id": "azure",
+    "name": "Azure OpenAI",
+    "api": "https://example.openai.azure.com",
+    "models": {
+      "gpt-6.1-sol": {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol (Azure)",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1050000, "output": 128000 },
+        "canonical_model_id": "openai/gpt-6.1-sol"
+      }
+    }
+  },
+  "openrouter": {
+    "id": "openrouter",
+    "name": "OpenRouter",
+    "api": "https://openrouter.ai/api/v1",
+    "models": {
+      "openai/gpt-6.1-sol": {
+        "id": "openai/gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1050000, "output": 128000 },
+        "canonical_model_id": "openai/gpt-6.1-sol"
+      },
+      "anthropic/claude-haiku-5.5": {
+        "id": "anthropic/claude-haiku-5.5",
+        "name": "Claude Haiku 5.5",
+        "reasoning": true,
+        "reasoning_options": [
+          { "type": "toggle" },
+          { "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }
+        ],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1000000, "output": 128000 },
+        "canonical_model_id": "anthropic/claude-haiku-5-5"
+      },
+      "moonshotai/kimi-k3": {
+        "id": "moonshotai/kimi-k3",
+        "name": "Kimi K3",
+        "family": "kimi-k3",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "high", "max"] }],
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "limit": { "context": 1000000, "output": 128000 },
+        "canonical_model_id": "moonshotai/kimi-k3"
+      }
+    }
+  },
+  "aihubmix": {
+    "id": "aihubmix",
+    "name": "AIHubMix",
+    "api": "https://aihubmix.com/v1",
+    "models": {
+      "gpt-6.1-sol": {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "medium", "high", "xhigh", "max"] }],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1050000, "output": 128000 },
+        "canonical_model_id": "openai/gpt-6.1-sol"
+      },
+      "hy3": {
+        "id": "hy3",
+        "name": "Hy3",
+        "family": "hy3",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "high"] }],
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "limit": { "context": 192000, "output": 64000 },
+        "canonical_model_id": "tencent/hy3"
+      },
+      "hy4-preview": {
+        "id": "hy4-preview",
+        "name": "Hy4 preview",
+        "family": "hy4-preview",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["high"] }],
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "limit": { "context": 960000, "output": 64000 },
+        "canonical_model_id": "tencent/hy4-preview"
+      }
+    }
+  },
+  "cloudflare-ai-gateway": {
+    "id": "cloudflare-ai-gateway",
+    "name": "Cloudflare AI Gateway",
+    "api": "https://gateway.ai.cloudflare.com/v1",
+    "models": {
+      "@cf/openai/gpt-oss-20b": {
+        "id": "@cf/openai/gpt-oss-20b",
+        "name": "GPT-OSS 20B",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "medium", "high"] }],
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 131072, "output": 8192 },
+        "canonical_model_id": "openai/gpt-oss-20b"
+      }
+    }
+  },
+  "model-oracle-ai": {
+    "id": "model-oracle-ai",
+    "name": "Model Oracle",
+    "models": {
+      "auto": {
+        "id": "auto",
+        "name": "Auto",
+        "reasoning": true,
+        "reasoning_options": [
+          { "type": "effort", "values": ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }
+        ],
+        "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+        "limit": { "context": 1000000, "output": 128000 }
+      }
+    }
+  },
+  "morph": {
+    "id": "morph",
+    "name": "Morph",
+    "models": {
+      "auto": {
+        "id": "auto",
+        "name": "Auto",
+        "reasoning": false,
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 32000, "output": 32000 }
+      }
+    }
+  },
+  "canonical-vendor": {
+    "id": "canonical-vendor",
+    "name": "Canonical Vendor",
+    "models": {
+      "friendly-alias": {
+        "id": "alias-id",
+        "name": "Alias Display",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 200000, "output": 64000 },
+        "canonical_model_id": "canonical-vendor/hidden-model"
+      }
+    }
+  },
+  "alias-reseller": {
+    "id": "alias-reseller",
+    "name": "Alias Reseller",
+    "models": {
+      "resold-model": {
+        "id": "resold-model",
+        "name": "Resold Model",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 64000, "output": 8192 },
+        "canonical_model_id": "upstream-vendor/actual-model"
+      }
+    }
+  },
+  "reseller-two": {
+    "id": "reseller-two",
+    "name": "Reseller Two",
+    "models": {
+      "whatever-id": {
+        "id": "whatever-id",
+        "name": "Whatever",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 32000, "output": 4096 },
+        "canonical_model_id": "upstream-vendor/deep-model"
+      }
+    }
+  },
+  "name-vendor": {
+    "id": "name-vendor",
+    "name": "Name Vendor",
+    "models": {
+      "opaque-id": {
+        "id": "opaque-id",
+        "name": "Fancy Display Name",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 8000, "output": 1024 }
+      }
+    }
+  },
+  "dash-vendor": {
+    "id": "dash-vendor",
+    "name": "Dash Vendor",
+    "models": {
+      "dash-model": {
+        "id": "dash-model",
+        "name": "Dash Model",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 8000, "output": 2048 }
+      }
+    }
+  },
+  "alpha-labs": {
+    "id": "alpha-labs",
+    "name": "Alpha Labs",
+    "models": {
+      "twin-model": {
+        "id": "twin-model",
+        "name": "Twin (Alpha)",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 16000, "output": 2048 }
+      }
+    }
+  },
+  "zeta-labs": {
+    "id": "zeta-labs",
+    "name": "Zeta Labs",
+    "models": {
+      "twin-model": {
+        "id": "twin-model",
+        "name": "Twin (Zeta)",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 16000, "output": 2048 }
+      }
+    }
+  },
+  "family-vendor": {
+    "id": "family-vendor",
+    "name": "Family Vendor",
+    "models": {
+      "opaque-model": {
+        "id": "opaque-model",
+        "name": "Opaque Model",
+        "family": "legacy-family",
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 4096, "output": 512 }
+      }
+    }
+  },
+  "moonshotai": {
+    "id": "moonshotai",
+    "name": "Moonshot AI",
+    "api": "https://api.moonshot.ai/v1",
+    "models": {
+      "kimi-k3": {
+        "id": "kimi-k3",
+        "name": "Kimi K3",
+        "family": "kimi-k3",
+        "reasoning": true,
+        "limit": { "context": 1000000, "output": 128000 },
+        "canonical_model_id": "moonshotai/kimi-k3"
+      }
+    }
+  },
+  "tencent-tokenhub": {
+    "id": "tencent-tokenhub",
+    "name": "Tencent Tokenhub",
+    "models": {
+      "hy3": {
+        "id": "hy3",
+        "name": "Hy3",
+        "family": "hy3",
+        "limit": { "context": 192000, "output": 64000 },
+        "canonical_model_id": "tencent/hy3"
+      }
+    }
+  },
+  "llmgateway": {
+    "id": "llmgateway",
+    "name": "LLM Gateway",
+    "models": {
+      "hy4-preview": {
+        "id": "hy4-preview",
+        "name": "Hy4 preview",
+        "family": "hy4-preview",
+        "limit": { "context": 960000, "output": 64000 },
+        "canonical_model_id": "tencent/hy4-preview"
+      }
+    }
+  },
+  "zhipuai": {
+    "id": "zhipuai",
+    "name": "Z.AI",
+    "api": "https://api.z.ai/v1",
+    "models": {
+      "glm-5.3": {
+        "id": "glm-5.3",
+        "name": "GLM-5.3",
+        "family": "glm",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "high", "max"] }],
+        "modalities": { "input": ["text", "image"], "output": ["text"] },
+        "limit": { "context": 1000000, "output": 64000 },
+        "canonical_model_id": "zhipuai/glm-5.3"
+      },
+      "glm-5.1": {
+        "id": "glm-5.1",
+        "name": "GLM-5.1",
+        "family": "glm",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "high"] }],
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 200000, "output": 128000 },
+        "canonical_model_id": "zhipuai/glm-5.1"
+      },
+      "glm-5": {
+        "id": "glm-5",
+        "name": "GLM-5",
+        "family": "glm",
+        "reasoning": true,
+        "reasoning_options": [{ "type": "effort", "values": ["low", "high"] }],
+        "modalities": { "input": ["text"], "output": ["text"] },
+        "limit": { "context": 200000, "output": 128000 },
+        "canonical_model_id": "zhipuai/glm-5"
+      }
+    }
+  }
+}
